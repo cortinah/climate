@@ -25,11 +25,17 @@ b <- ggplot(paleotemp,aes(x=age_ice,y=temp)) +geom_line(aes(y=rollmean(temp, 8, 
             y='Temperature (C)')
 
 a / b + plot_annotation(title = "Paleoclimate: Ice Core Records", caption = "Source: Carbon Dioxide Information Analysis Center (CDIAC)\nhttp://cdiac.ess-dive.lbl.gov/trends/co2/vostok.html",
-      subtitle='420,000 years from the Vostok ice core, Antarctica.', theme = theme(  plot.title = element_text(size = 20)))
+      subtitle='420,000 years from the Vostok ice core, Antarctica.', theme = theme(  plot.title = element_text(size = 20))) +
+  
 
-#vostok$depth <- round(vostok$depth)
-#paleo <- left_join(vostok,paleotemp,by='depth')
-#ggplot(paleo,aes(x=co2,y=temp)) +geom_point() +geom_smooth(method='lm',formula=y~log(x),fullrange=T) +scale_x_continuous(lim=c(150,400))
+vostok$depth <- round(vostok$depth)
+paleo <- left_join(vostok,paleotemp,by='depth')
+ggplot(paleo,aes(x=co2,y=temp)) +geom_point() +geom_smooth(method='lm',formula=y~(x),fullrange=T) +scale_x_continuous(lim=c(150,350)) +
+  labs(x=expression(CO[2]*' concentration' ), y='Temperature (C)', title = "Paleoclimate: Ice Core Records", caption = "Source: Carbon Dioxide Information Analysis Center (CDIAC)\nhttp://cdiac.ess-dive.lbl.gov/trends/co2/vostok.html",
+       subtitle='420,000 years from the Vostok ice core, Antarctica.') +
+  annotate('text',x=190,y=11,label="Correlation: 0.82",size=6)
+
+cor(paleo$co2, paleo$temp)
 
 file_url <- 'ftp://aftp.cmdl.noaa.gov/products/trends/co2/co2_mm_mlo.txt'
 download.file(file_url,'maunaloa.txt')
@@ -46,7 +52,8 @@ ggplot(maunaloa, aes(x=date, y=average)) +geom_line(alpha=0.5) +
 
 file_url <- 'https://data.giss.nasa.gov/gistemp/tabledata_v3/GLB.Ts+dSST.csv'
 download.file(file_url,'gisstemp.csv')
-gisstemp <- read_csv("gisstemp.csv", skip = 1)
+gisstemp <- read_csv("gisstemp.csv", skip = 1, na = '***')
+gisstemp[nrow(gisstemp),14] <- mean(as.numeric(gisstemp[nrow(gisstemp),2:13]), na.rm = T)
 gisstemp <- gisstemp[,c('Year','J-D')]
 colnames(gisstemp) <- c('date','annmean')
 gisstemp$date <- as.Date(as.yearmon(gisstemp$date))
