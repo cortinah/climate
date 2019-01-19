@@ -80,6 +80,8 @@ p2 <- ggplot(krem_range, aes(x=month, y=mean, color=type)) +
 
 p1+p2  +plot_annotation(title='Kremsmünster, Austria Temperature Range', caption='Source: https://www.ecad.eu/')
 
+
+## Temperature Anomaly
 krem$day <- yday(krem$Index)
 
 krem %>% filter(type=='mean_temp', Index<as.Date('1976-01-01')) %>% group_by(day) %>% summarize(centurymean=mean(Temp)) -> krem_range
@@ -117,6 +119,11 @@ ggplot(num_freeze_days, aes(x=year, y=num_freezing)) +geom_line(alpha=0.8) +them
   labs(title='Kremsmünster, Austria: 1876-2018 Number of Freezing Days', subtitle = 'Number of days per year with daily mean temp < 0 Cº. Loess trend in blue.',
        caption='Source: https://www.ecad.eu/')
 
+lfit <- lm(num_freezing ~ year, data=num_freeze_days)
+library(segmented)
+sfit <- segmented(lfit, seg.Z = ~ year)
+summary(sfit)
+
 ## Hot days
 krem_high %>% group_by(year) %>% filter(Temp >= 30) %>% summarize(num_hot=n()) -> num_hot_days
 num_hot_days %<>% filter(year<=2018)
@@ -126,4 +133,15 @@ ggplot(num_hot_days, aes(x=year, y=num_hot)) +geom_line(alpha=0.7) +theme_bw(bas
   scale_y_continuous('Number of Hot Days', limits=c(0, 40), breaks=seq(0, 40, 10) , oob=scales::rescale_none)  +
   geom_smooth(size=1.5, color='red') +
   labs(title='Kremsmünster, Austria: 1876-2018 Number of Hot Days', subtitle = 'Number of days per year with daily high temp >= 30 Cº. Loess trend in red',
+       caption='Source: https://www.ecad.eu/')
+
+
+## Annual excess degrees
+krem_high %>% mutate(excess_heat=ifelse(Temp-30>0, Temp-30, 0)) %>% group_by(year) %>% summarize(excess_degrees_total=sum(excess_heat)) -> excess_degrees
+
+ggplot(excess_degrees, aes(x=year, y=excess_degrees_total)) +geom_line(alpha=0.7) +theme_bw(base_size = 14) +
+  scale_x_continuous('Year', breaks=seq(1880,2020,10)) +
+  scale_y_continuous('Annual Excess Degrees', limits=c(0, 140), breaks=seq(0, 140, 20) , oob=scales::rescale_none)  +
+  geom_smooth(size=1.5, color='red') +
+  labs(title='Kremsmünster, Austria: 1876-2018 Annual Excess Degree Days', subtitle = 'Annual sum of (daily high - 30 Cº). Loess trend in red',
        caption='Source: https://www.ecad.eu/')
