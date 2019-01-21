@@ -89,12 +89,11 @@ anomaly %<>% mutate(year = year(date)) %>% as_tsibble(index=date) %>%
 ggplot(anomaly, aes(x=year, y=anom)) +geom_line(alpha=0.8)  +
   scale_x_continuous('Year', breaks=seq(1880, 2020, 20)) +
   scale_y_continuous('Temperature Anomaly Cº', limits=c(-2, 4), breaks=seq(-2, 4, 0.5))  +
-  geom_smooth(size=1.5, color='red') +
+  geom_smooth(size=1.5, color='red') + geom_hline(yintercept=0,color='dodgerblue',linetype=2,size=2) +
   labs(title='Kremsmünster, Austria: 1876-2018 Temperature Anomaly', subtitle = 'Baseline period: 1876-1976. Loess trend in red.',
           caption='Source: https://www.ecad.eu/')
 
-rm(months, krem_range, p1, p2, anomaly)
-
+##
 krem_narrow %<>% mutate(year=year(date), winter=ifelse(month>6, 1, 0)) %>%
   mutate(year=year+winter) %>% select(-winter)
 
@@ -133,3 +132,21 @@ ggplot(excess_degrees, aes(x=year, y=excess_degrees_total)) +geom_line(alpha=0.7
   geom_smooth(size=1.5, color='red') +
   labs(title='Kremsmünster, Austria: 1876-2018 Annual Excess Degree Days', subtitle = 'Annual sum of (daily high - 30 Cº). Loess trend in red',
        caption='Source: https://www.ecad.eu/')
+
+
+# Forecast Anomaly
+anomaly_model <- anomaly %>% model(ets=ETS(anom))
+
+ggplot(augment(anomaly_model), aes(x=year)) +geom_line(aes(y=anom)) +geom_line(aes(y=.fitted),col='red')
+
+anomaly_fbl <- anomaly_model %>%  forecast(h = "10 years")
+anomaly_fbl <- fortify(anomaly_fbl,level=80)
+
+p1 <- ggplot(anomaly, aes(x=year, y=anom)) +geom_line(alpha=0.8)  +
+  scale_x_continuous('Year', breaks=seq(1880, 2020, 20)) + geom_hline(yintercept=0,linetype=2,color='dodgerblue',size=2)+
+  scale_y_continuous('Temperature Anomaly Cº', limits=c(-2, 5), breaks=seq(-2, 5, 0.5))  +
+  labs(title='Kremsmünster, Austria: 1876-2018 Temperature Anomaly', subtitle = '10-year ETS forecast in red, 80% confidence interval shaded.',
+       caption='Source: https://www.ecad.eu/')
+
+p1 + geom_smooth(aes(x=year, y=anom, ymax=upper, ymin=lower), size=1.5,
+                 color='red', fill='dodgerblue', data=anomaly_fbl, stat='identity')
